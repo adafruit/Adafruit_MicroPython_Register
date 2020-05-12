@@ -26,12 +26,41 @@
 
 Multi bit registers
 
-* Author(s): Scott Shawcroft
+* Author(s): Scott Shawcroft, Bryan Siepert
 """
+import struct
+
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_Register.git"
 
+class ROByteArray:
+    """
+    Multibit register (less than a full byte) that is readable and writeable.
+    This must be within a byte register.
+
+    Values are `int` between 0 and 2 ** ``num_bits`` - 1.
+
+    :param int num_bits: The number of bits in the field.
+    :param int register_address: The register address to read the bit from
+    :param type lowest_bit: The lowest bits index within the byte at ``register_address``
+    :param int register_width: The number of bytes in the register. Defaults to 1.
+    :param bool lsb_first: Is the first byte we read from I2C the LSB? Defaults to true
+    """
+
+    def __init__(  # pylint: disable=too-many-arguments
+        self, num_bytes, register_address, format_str):
+
+        self.buffer = bytearray(1 + num_bytes)
+        self.buffer[0] = register_address
+        self.format = format_str
+
+
+    def __get__(self, obj, objtype=None):
+        with obj.i2c_device as i2c:
+            i2c.write_then_readinto(self.buffer, self.buffer, out_end=1, in_start=1)
+
+        return struct.unpack_from(self.format, self.buffer, 1)  # offset=1
 
 class RWBits:
     """
